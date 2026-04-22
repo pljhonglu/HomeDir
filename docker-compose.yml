@@ -1,0 +1,9 @@
+services:
+  homedir:
+    image: 52lxcloud/homedir:latest
+    container_name: homedir
+    restart: unless-stopped
+    ports:
+      - "4027:4027"
+    volumes:
+      - ./data:/app/data

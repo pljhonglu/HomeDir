@@ -1,6 +1,6 @@
 export default function Loading() {
   return (
-    <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto flex min-h-dvh max-w-5xl flex-col px-4 pt-8 sm:px-6 lg:px-8">
       {/* 标题骨架 */}
       <header className="mb-8 flex items-center gap-2.5">
         <div className="size-7 animate-pulse rounded-lg bg-muted" />

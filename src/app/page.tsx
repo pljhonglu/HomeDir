@@ -1,34 +1,34 @@
 import { Terminal } from "lucide-react";
+import { GithubIcon } from "@/components/icons/github";
 import { getSites } from "@/lib/sites";
-import { getNetworkMode } from "@/lib/network";
 import { HomePage } from "@/components/home-page";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { SITE_NAME } from "@/lib/constants";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const { sites, categories } = getSites();
-  const isInternal = await getNetworkMode();
+  const { sites, categories, config, shortcuts } = getSites();
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto flex min-h-dvh max-w-5xl flex-col px-4 pt-8 sm:px-6 lg:px-8">
       {/* 标题 — Server Component，0 JS */}
       <header className="mb-8 flex items-center gap-2.5">
-        <div className="flex size-7 items-center justify-center rounded-lg bg-foreground">
-          <Terminal className="size-3.5 text-background" />
-        </div>
-        <span className="text-sm font-semibold tracking-tight">{SITE_NAME}</span>
+        <Terminal className="size-5" />
+        <span className="flex-1 text-sm font-semibold tracking-tight">{config.site_name}</span>
+        <a href="https://github.com/52Lxcloud/HomeDir" target="_blank" rel="noopener noreferrer" className="text-muted-foreground/50 transition-colors hover:text-muted-foreground">
+          <GithubIcon className="size-4" />
+        </a>
       </header>
 
       {/* 交互区域 — Client Component */}
       <div className="flex-1">
-        <HomePage sites={sites} categories={categories} defaultInternal={isInternal} />
+        <HomePage sites={sites} categories={categories} shortcuts={shortcuts} />
       </div>
 
-      {/* 底部主题切换 */}
-      <footer className="mt-12 flex justify-center pb-4">
-        <ThemeToggle />
+      {/* 底部 */}
+      <footer className="mt-auto flex flex-col items-center gap-4 pb-4 pt-8">
+        {config.footer_text && (
+          <p className="text-[11px] text-muted-foreground/60 [&_a]:no-underline [&_a]:hover:text-muted-foreground" dangerouslySetInnerHTML={{ __html: config.footer_text }} />
+        )}
       </footer>
     </div>
   );

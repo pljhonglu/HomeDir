@@ -2,7 +2,7 @@ import { FileQuestion } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-4">
       <FileQuestion className="size-8 text-muted-foreground" />
       <div className="text-center">
         <h2 className="text-sm font-semibold">页面不存在</h2>

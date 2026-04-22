@@ -7,6 +7,12 @@ export function getIcon(name: string): LucideIcon {
   return icon || LucideIcons.Globe;
 }
 
+/** 获取图标的显示 URL */
+export function getIconUrl(iconUrl: string): string {
+  if (!iconUrl) return "";
+  return `/api/icons/${iconUrl}`;
+}
+
 // 常用图标列表，用于后台选择
 export const commonIcons = [
   "Globe", "HardDrive", "Server", "Database", "Film", "Music",

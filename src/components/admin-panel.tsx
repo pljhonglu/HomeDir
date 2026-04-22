@@ -1,354 +1,113 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { SiteData } from "@/lib/types";
-import { getIcon, commonIcons } from "@/lib/icons";
-import { createSiteAction, updateSiteAction, deleteSiteAction } from "@/app/admin/actions";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  Loader2,
-  Save,
-  X,
-} from "lucide-react";
+type SafeConfig = { site_name: string; site_description: string; footer_text: string };
+import { AdminOverview } from "@/components/admin/overview";
+import { AdminSites } from "@/components/admin/sites";
+import { AdminCategories } from "@/components/admin/categories";
+import { AdminSettings } from "@/components/admin/settings";
+import { AdminShortcuts } from "@/components/admin/shortcuts";
+import type { ShortcutData } from "@/components/admin/shortcuts";
+import { AdminAbout } from "@/components/admin/about";
+import { BarChart3, LayoutGrid, Layers, Settings, Keyboard, Info } from "lucide-react";
 
-interface SiteFormData {
-  name: string;
-  desc: string;
-  icon: string;
-  category: string;
-  url_internal: string;
-  url_external: string;
-  tags: string;
-  sort_order: number;
-}
+type Tab = "overview" | "sites" | "categories" | "shortcuts" | "settings" | "about";
+const validTabs: Tab[] = ["overview", "sites", "categories", "shortcuts", "settings", "about"];
 
-const emptyForm: SiteFormData = {
-  name: "",
-  desc: "",
-  icon: "Globe",
-  category: "",
-  url_internal: "",
-  url_external: "",
-  tags: "",
-  sort_order: 0,
-};
+const tabs = [
+  { key: "overview" as const, label: "概览", icon: BarChart3 },
+  { key: "sites" as const, label: "站点", icon: LayoutGrid },
+  { key: "categories" as const, label: "分类", icon: Layers },
+  { key: "shortcuts" as const, label: "热键", icon: Keyboard },
+  { key: "settings" as const, label: "配置", icon: Settings },
+  { key: "about" as const, label: "关于", icon: Info },
+];
 
 export function AdminPanel({
   sites,
   categories,
+  config,
+  shortcuts,
 }: {
   sites: SiteData[];
   categories: string[];
+  config: SafeConfig;
+  shortcuts: ShortcutData[];
 }) {
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingSite, setEditingSite] = useState<string | null>(null);
-  const [form, setForm] = useState<SiteFormData>(emptyForm);
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [tab, setTabState] = useState<Tab>("overview");
+  const [mounted, setMounted] = useState(false);
 
-  const openCreate = () => {
-    setEditingSite(null);
-    setForm(emptyForm);
-    setEditDialogOpen(true);
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    window.location.hash = t;
   };
 
-  const openEdit = (site: SiteData) => {
-    setEditingSite(site.id);
-    setForm({
-      name: site.name,
-      desc: site.desc,
-      icon: site.icon,
-      category: site.category,
-      url_internal: site.url.internal,
-      url_external: site.url.external,
-      tags: site.tags.join(", "),
-      sort_order: site.sort_order,
-    });
-    setEditDialogOpen(true);
-  };
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (validTabs.includes(hash as Tab)) setTabState(hash as Tab);
+    setMounted(true);
 
-  const handleSave = useCallback(async () => {
-    setSaving(true);
-    try {
-      const data = {
-        name: form.name,
-        desc: form.desc,
-        icon: form.icon,
-        category: form.category,
-        url_internal: form.url_internal,
-        url_external: form.url_external,
-        tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
-        sort_order: form.sort_order,
-      };
-
-      const result = editingSite
-        ? await updateSiteAction(editingSite, data)
-        : await createSiteAction(data);
-
-      if (!result.success) {
-        alert(result.error);
-        return;
-      }
-
-      setEditDialogOpen(false);
-    } finally {
-      setSaving(false);
-    }
-  }, [form, editingSite]);
-
-  const handleDelete = useCallback(async (id: string) => {
-    if (!confirm("确认删除该站点？")) return;
-    setDeleting(id);
-    try {
-      const result = await deleteSiteAction(id);
-      if (!result.success) alert(result.error);
-    } finally {
-      setDeleting(null);
-    }
+    const onHash = () => {
+      const h = window.location.hash.slice(1);
+      if (validTabs.includes(h as Tab)) setTabState(h as Tab);
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  const updateField = (field: keyof SiteFormData, value: string | number) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
+  const categoryCount = useMemo(() => {
+    return new Set(sites.map((s) => s.category)).size;
+  }, [sites]);
+
+  if (!mounted) {
+    return (
+      <div className="mb-6 flex animate-pulse items-center gap-1 rounded-lg border bg-muted/30 p-1">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-7 w-16 rounded-md bg-muted/50" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <>
-      {/* 头部操作 */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <p className="text-xs text-muted-foreground">
-            共 {sites.length} 个站点，{categories.length} 个分类
-          </p>
-        </div>
-        <Button size="sm" onClick={openCreate}>
-          <Plus className="size-4" />
-          添加站点
-        </Button>
+      {/* Tab 导航 */}
+      <div className="mb-6 flex items-center gap-1 overflow-x-auto rounded-lg border bg-muted/30 p-1">
+        {tabs.map(({ key, label, icon: TabIcon }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              tab === key
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <TabIcon className="size-3.5" />
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* 列表 */}
-      {sites.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center text-sm text-muted-foreground">
-            暂无站点，点击上方按钮添加
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10"></TableHead>
-                <TableHead>名称</TableHead>
-                <TableHead className="hidden sm:table-cell">分类</TableHead>
-                <TableHead className="hidden md:table-cell">描述</TableHead>
-                <TableHead className="hidden lg:table-cell">标签</TableHead>
-                <TableHead className="w-24 text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sites.map((site) => {
-                const Icon = getIcon(site.icon);
-                return (
-                  <TableRow key={site.id}>
-                    <TableCell>
-                      <Icon className="size-4 text-muted-foreground" />
-                    </TableCell>
-                    <TableCell className="font-medium">{site.name}</TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <Badge variant="secondary" className="text-[10px]">
-                        {site.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden text-xs text-muted-foreground md:table-cell">
-                      {site.desc}
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <div className="flex gap-1">
-                        {site.tags.slice(0, 2).map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-[10px]">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="xs" onClick={() => openEdit(site)}>
-                          <Pencil className="size-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() => handleDelete(site.id)}
-                          disabled={deleting === site.id}
-                        >
-                          {deleting === site.id ? (
-                            <Loader2 className="size-3 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-3" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </Card>
+      {tab === "overview" && (
+        <AdminOverview sites={sites} categoryCount={categoryCount} onNavigate={(t) => setTab(t as Tab)} />
       )}
-
-      {/* 编辑/创建弹窗 */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingSite ? "编辑站点" : "添加站点"}</DialogTitle>
-            <DialogDescription>
-              {editingSite ? "修改站点信息" : "填写站点信息以添加到导航"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-2">
-            <div className="grid gap-1.5">
-              <Label htmlFor="name">名称</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => updateField("name", e.target.value)}
-                placeholder="例如: Synology NAS"
-              />
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="desc">描述</Label>
-              <Input
-                id="desc"
-                value={form.desc}
-                onChange={(e) => updateField("desc", e.target.value)}
-                placeholder="简短描述"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="grid gap-1.5">
-                <Label>图标</Label>
-                <Select value={form.icon} onValueChange={(v) => updateField("icon", v)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {commonIcons.map((name) => {
-                      const Ic = getIcon(name);
-                      return (
-                        <SelectItem key={name} value={name}>
-                          <div className="flex items-center gap-2">
-                            <Ic className="size-3.5" />
-                            <span className="text-xs">{name}</span>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="category">分类</Label>
-                <Input
-                  id="category"
-                  value={form.category}
-                  onChange={(e) => updateField("category", e.target.value)}
-                  placeholder="例如: 基础设施"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-1.5">
-              <Label htmlFor="url_internal">内网地址</Label>
-              <Input
-                id="url_internal"
-                value={form.url_internal}
-                onChange={(e) => updateField("url_internal", e.target.value)}
-                placeholder="http://192.168.1.x:port"
-              />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="url_external">外网地址</Label>
-              <Input
-                id="url_external"
-                value={form.url_external}
-                onChange={(e) => updateField("url_external", e.target.value)}
-                placeholder="https://service.example.com"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2 grid gap-1.5">
-                <Label htmlFor="tags">标签 (逗号分隔)</Label>
-                <Input
-                  id="tags"
-                  value={form.tags}
-                  onChange={(e) => updateField("tags", e.target.value)}
-                  placeholder="存储, 文件, nas"
-                />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="sort">排序</Label>
-                <Input
-                  id="sort"
-                  type="number"
-                  value={form.sort_order}
-                  onChange={(e) => updateField("sort_order", parseInt(e.target.value) || 0)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(false)}>
-              <X className="size-3.5" />
-              取消
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={saving || !form.name || !form.category}
-            >
-              {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-              {editingSite ? "保存" : "创建"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {tab === "sites" && (
+        <AdminSites sites={sites} categories={categories} />
+      )}
+      {tab === "categories" && (
+        <AdminCategories sites={sites} />
+      )}
+      {tab === "shortcuts" && (
+        <AdminShortcuts shortcuts={shortcuts} sites={sites} />
+      )}
+      {tab === "settings" && (
+        <AdminSettings config={config} />
+      )}
+      {tab === "about" && (
+        <AdminAbout />
+      )}
     </>
   );
 }

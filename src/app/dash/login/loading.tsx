@@ -1,8 +1,8 @@
 import { Loader2 } from "lucide-react";
 
-export default function AdminLoading() {
+export default function LoginLoading() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-dvh items-center justify-center">
       <Loader2 className="size-5 animate-spin text-muted-foreground" />
     </div>
   );

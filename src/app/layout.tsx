@@ -2,16 +2,19 @@ import type { Metadata } from "next";
 import { GeistMono } from "geist/font/mono";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
+import { getConfig } from "@/lib/db";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: {
-    default: `${SITE_NAME} 导航`,
-    template: `%s - ${SITE_NAME}`,
-  },
-  description: SITE_DESCRIPTION,
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const config = getConfig();
+  return {
+    title: {
+      default: config.site_name,
+      template: `%s - ${config.site_name}`,
+    },
+    description: config.site_description,
+  };
+}
 
 export default function RootLayout({
   children,
@@ -19,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning className={GeistMono.variable}>
+    <html lang="zh-CN" suppressHydrationWarning data-scroll-behavior="smooth" className={GeistMono.variable}>
       <body className="antialiased font-mono">
         <ThemeProvider>
           {children}

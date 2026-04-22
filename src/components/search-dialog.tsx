@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo } from "react";
-import { getIcon } from "@/lib/icons";
+import { getIcon, getIconUrl } from "@/lib/icons";
 import type { SiteData } from "@/lib/types";
 import { Search } from "lucide-react";
 import {
@@ -48,7 +48,7 @@ export function SearchDialog({
 
   const handleSelect = useCallback(
     (site: SiteData) => {
-      const url = isInternal ? site.url.internal : site.url.external;
+      const url = (isInternal ? site.url.internal : site.url.external) || site.url.internal || site.url.external;
       window.open(url, "_blank", "noopener,noreferrer");
       onOpenChange(false);
     },
@@ -58,7 +58,7 @@ export function SearchDialog({
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput placeholder="搜索服务…" />
-      <CommandList className="scrollbar-auto-hide">
+      <CommandList>
         <CommandEmpty>
           <div className="flex flex-col items-center gap-2 py-4 text-muted-foreground/60">
             <Search className="size-8 stroke-[1.5]" />
@@ -69,18 +69,22 @@ export function SearchDialog({
           <CommandGroup key={cat} heading={cat}>
             {items.map((site) => {
               const Icon = getIcon(site.icon);
-              const url = isInternal ? site.url.internal : site.url.external;
+              const url = (isInternal ? site.url.internal : site.url.external) || site.url.internal || site.url.external;
               let hostname: string;
               try { hostname = new URL(url).hostname; } catch { hostname = url; }
               return (
                 <CommandItem
                   key={site.id}
-                  value={`${site.name} ${site.desc} ${site.tags?.join(" ") ?? ""}`}
+                  value={`${site.name} ${site.desc}`}
                   onSelect={() => handleSelect(site)}
                   className="gap-3"
                 >
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted/80">
-                    <Icon className="size-4 text-muted-foreground" />
+                    {site.icon_url ? (
+                      <img src={getIconUrl(site.icon_url)} alt="" className="size-5 rounded-md object-contain" />
+                    ) : (
+                      <Icon className="size-4 text-muted-foreground" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium">{site.name}</div>

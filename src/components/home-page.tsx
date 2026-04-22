@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import type { SiteData } from "@/lib/types";
-import { getIcon } from "@/lib/icons";
+import type { SiteData, ShortcutConfig } from "@/lib/types";
+import { getIcon, getIconUrl } from "@/lib/icons";
 import { SearchDialog } from "@/components/search-dialog";
+import { ShortcutHints } from "@/components/shortcut-hints";
 import { NetworkToggle } from "@/components/network-toggle";
 import { Button } from "@/components/ui/button";
-import { Search, Settings } from "lucide-react";
+import Link from "next/link";
+import { Search } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import NumberFlow from "@number-flow/react";
 
 function getGreeting(hour: number) {
@@ -129,18 +132,54 @@ function CategoryTabs({
   );
 }
 
+async function probeInternal(url: string, timeout = 2000): Promise<boolean> {
+  const start = Date.now();
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    await fetch(url, { mode: "no-cors", cache: "no-store", signal: controller.signal });
+    clearTimeout(timer);
+    return true;
+  } catch {
+    // 快速失败（< 300ms）通常是 CORS/mixed-content，说明主机可达
+    // 超时失败说明主机不可达
+    return Date.now() - start < timeout - 200;
+  }
+}
+
+async function detectNetwork(internalUrls: string[]): Promise<boolean> {
+  if (internalUrls.length === 0) return true;
+  // 取前 3 个内网地址并发探测，任一可达即为内网
+  const targets = internalUrls.slice(0, 3);
+  const results = await Promise.all(targets.map((url) => probeInternal(url)));
+  return results.some(Boolean);
+}
+
 export function HomePage({
   sites,
   categories,
-  defaultInternal,
+  shortcuts,
 }: {
   sites: SiteData[];
   categories: string[];
-  defaultInternal: boolean;
+  shortcuts: ShortcutConfig[];
 }) {
   const [active, setActive] = useState(ALL);
-  const [isInternal, setIsInternal] = useState(defaultInternal);
+  const [isInternal, setIsInternal] = useState(true);
+  const [manualOverride, setManualOverride] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // 每次加载自动探测，手动切换后跳过
+  useEffect(() => {
+    if (manualOverride) return;
+    const urls = [...new Set(sites.map((s) => s.url.internal))].filter(Boolean);
+    detectNetwork(urls).then(setIsInternal);
+  }, [sites, manualOverride]);
+
+  const handleToggle = useCallback((val: boolean) => {
+    setManualOverride(true);
+    setIsInternal(val);
+  }, []);
 
   const filtered = useMemo(
     () => (active === ALL ? sites : sites.filter((s) => s.category === active)),
@@ -150,6 +189,7 @@ export function HomePage({
   return (
     <>
       <SearchDialog sites={sites} categories={categories} isInternal={isInternal} open={searchOpen} onOpenChange={setSearchOpen} />
+      <ShortcutHints sites={sites} isInternal={isInternal} onSearch={() => setSearchOpen(true)} shortcuts={shortcuts} />
 
       {/* 工具栏 */}
       <div className="mb-8 flex items-center justify-between">
@@ -164,13 +204,9 @@ export function HomePage({
             <Search className="size-3.5" />
           </Button>
           <div className="mx-0.5 h-4 w-px bg-border" />
-          <NetworkToggle defaultInternal={defaultInternal} onToggle={setIsInternal} />
+          <NetworkToggle isInternal={isInternal} onToggle={handleToggle} />
           <div className="mx-0.5 h-4 w-px bg-border" />
-          <Button variant="ghost" size="sm" asChild className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
-            <a href="/admin">
-              <Settings className="size-3.5" />
-            </a>
-          </Button>
+          <ThemeToggle />
         </div>
       </div>
 
@@ -186,16 +222,16 @@ export function HomePage({
         <div className="flex items-center justify-center rounded-2xl border border-dashed py-24">
           <span className="text-sm text-muted-foreground">
             暂无站点 ·{" "}
-            <a href="/admin" className="underline underline-offset-4 hover:text-foreground">
+            <Link href="/dash" className="underline underline-offset-4 hover:text-foreground">
               去后台添加
-            </a>
+            </Link>
           </span>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           {filtered.map((site) => {
             const Icon = getIcon(site.icon);
-            const url = isInternal ? site.url.internal : site.url.external;
+            const url = (isInternal ? site.url.internal : site.url.external) || site.url.internal || site.url.external;
             return (
               <a
                 key={site.id}
@@ -204,8 +240,12 @@ export function HomePage({
                 rel="noreferrer"
                 className="group flex items-center gap-2.5 rounded-xl border bg-card p-3 shadow-sm transition-all hover:border-foreground/15 hover:bg-accent/50 hover:shadow-md sm:gap-3.5 sm:p-4"
               >
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted transition-colors group-hover:bg-foreground group-hover:text-background sm:size-10 sm:rounded-xl">
-                  <Icon className="size-3.5 sm:size-4" />
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted transition-colors sm:size-10 sm:rounded-xl">
+                  {site.icon_url ? (
+                    <img src={getIconUrl(site.icon_url)} alt="" className="size-5 rounded-md object-contain sm:size-6" />
+                  ) : (
+                    <Icon className="size-3.5 sm:size-4" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <span className="truncate text-xs font-medium sm:text-sm">{site.name}</span>

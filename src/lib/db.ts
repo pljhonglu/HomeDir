@@ -2,29 +2,29 @@ import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
 
-export interface SiteRow {
+interface SiteRow {
   id: string;
   name: string;
   desc: string;
   icon: string; // lucide icon name, e.g. "HardDrive"
+  icon_url: string; // favicon filename in data/icons/
   category: string;
   url_internal: string;
   url_external: string;
-  tags: string; // JSON array string
   sort_order: number;
   created_at: string;
   updated_at: string;
 }
 
-export interface SiteInput {
+interface SiteInput {
   id?: string;
   name: string;
   desc: string;
   icon: string;
+  icon_url?: string;
   category: string;
   url_internal: string;
   url_external: string;
-  tags?: string[];
   sort_order?: number;
 }
 
@@ -55,14 +55,98 @@ function getDb() {
       category TEXT NOT NULL DEFAULT '未分类',
       url_internal TEXT NOT NULL DEFAULT '',
       url_external TEXT NOT NULL DEFAULT '',
-      tags TEXT NOT NULL DEFAULT '[]',
+      icon_url TEXT NOT NULL DEFAULT '',
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
 
+  // 配置表
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS config (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT ''
+    )
+  `);
+
+  // 热键表
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS shortcuts (
+      id TEXT PRIMARY KEY,
+      key TEXT NOT NULL,
+      site_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE
+    )
+  `);
+
   return _db;
+}
+
+// 热键操作
+export interface ShortcutRow {
+  id: string;
+  key: string;
+  site_id: string;
+  created_at: string;
+}
+
+export function getAllShortcuts(): ShortcutRow[] {
+  const db = getDb();
+  return db.prepare("SELECT * FROM shortcuts ORDER BY created_at").all() as ShortcutRow[];
+}
+
+export function createShortcut(key: string, siteId: string): ShortcutRow {
+  const db = getDb();
+  const id = genId();
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace(' ', 'T');
+  db.prepare("INSERT INTO shortcuts (id, key, site_id, created_at) VALUES (?, ?, ?, ?)").run(id, key.toUpperCase(), siteId, now);
+  return db.prepare("SELECT * FROM shortcuts WHERE id = ?").get(id) as ShortcutRow;
+}
+
+export function deleteShortcut(id: string): boolean {
+  const db = getDb();
+  return db.prepare("DELETE FROM shortcuts WHERE id = ?").run(id).changes > 0;
+}
+
+// 配置操作
+export interface SiteConfig {
+  site_name: string;
+  site_description: string;
+  footer_text: string;
+  admin_password: string;
+  admin_session: string;
+}
+
+const defaultConfig: SiteConfig = {
+  site_name: "HomeDir",
+  site_description: "快速访问内外网服务的导航中心",
+  footer_text: "© 2026 Lxcloud · Powered by <a href=\"https://github.com/52Lxcloud/HomeDir\">HomeDir</a>",
+  admin_password: "",
+  admin_session: "",
+};
+
+export function getConfig(): SiteConfig {
+  const db = getDb();
+  const rows = db.prepare("SELECT key, value FROM config").all() as { key: string; value: string }[];
+  const map = new Map(rows.map((r) => [r.key, r.value]));
+  return {
+    site_name: map.get("site_name") || defaultConfig.site_name,
+    site_description: map.get("site_description") || defaultConfig.site_description,
+    footer_text: map.get("footer_text") || defaultConfig.footer_text,
+    admin_password: map.get("admin_password") || "",
+    admin_session: map.get("admin_session") || "",
+  };
+}
+
+export function updateConfig(updates: Record<string, string>): void {
+  const db = getDb();
+  const stmt = db.prepare("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)");
+  const run = db.transaction((entries: [string, string][]) => {
+    for (const [k, v] of entries) stmt.run(k, v);
+  });
+  run(Object.entries(updates) as [string, string][]);
 }
 
 // 生成短 ID
@@ -77,23 +161,24 @@ export function getAllSites(): SiteRow[] {
   return rows;
 }
 
+
 export function createSite(input: SiteInput): SiteRow {
   const db = getDb();
   const id = input.id || genId();
-  const now = new Date().toISOString();
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace(' ', 'T');
 
   db.prepare(`
-    INSERT INTO sites (id, name, desc, icon, category, url_internal, url_external, tags, sort_order, created_at, updated_at)
+    INSERT INTO sites (id, name, desc, icon, icon_url, category, url_internal, url_external, sort_order, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     input.name,
     input.desc,
     input.icon,
+    input.icon_url || '',
     input.category,
     input.url_internal,
     input.url_external,
-    JSON.stringify(input.tags || []),
     input.sort_order ?? 0,
     now,
     now
@@ -111,21 +196,21 @@ export function updateSite(id: string, input: Partial<SiteInput>): SiteRow | nul
     return null;
   }
 
-  const now = new Date().toISOString();
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace(' ', 'T');
   db.prepare(`
     UPDATE sites SET
-      name = ?, desc = ?, icon = ?, category = ?,
-      url_internal = ?, url_external = ?, tags = ?,
+      name = ?, desc = ?, icon = ?, icon_url = ?, category = ?,
+      url_internal = ?, url_external = ?,
       sort_order = ?, updated_at = ?
     WHERE id = ?
   `).run(
     input.name ?? existing.name,
     input.desc ?? existing.desc,
     input.icon ?? existing.icon,
+    input.icon_url ?? existing.icon_url,
     input.category ?? existing.category,
     input.url_internal ?? existing.url_internal,
     input.url_external ?? existing.url_external,
-    input.tags ? JSON.stringify(input.tags) : existing.tags,
     input.sort_order ?? existing.sort_order,
     now,
     id
@@ -143,32 +228,17 @@ export function deleteSite(id: string): boolean {
   return result.changes > 0;
 }
 
-// 种子数据：将现有 sites.ts 数据导入数据库
-export function seedIfEmpty() {
+// 分类操作
+export function renameCategory(oldName: string, newName: string): number {
   const db = getDb();
-  const count = (db.prepare("SELECT COUNT(*) as c FROM sites").get() as { c: number }).c;
-
-  if (count === 0) {
-    const seeds: SiteInput[] = [
-      { id: "nas", name: "Synology NAS", desc: "文件管理与存储中心", icon: "HardDrive", category: "基础设施", url_internal: "http://192.168.1.5:5000", url_external: "https://nas.lxcloud.com", tags: ["存储", "文件", "nas"], sort_order: 0 },
-      { id: "emby", name: "Emby", desc: "私人多媒体服务器", icon: "Film", category: "娱乐", url_internal: "http://192.168.1.5:8096", url_external: "https://media.lxcloud.com", tags: ["视频", "电影", "串流"], sort_order: 0 },
-      { id: "transmission", name: "Transmission", desc: "下载管理工具", icon: "Server", category: "工具", url_internal: "http://192.168.1.5:6969", url_external: "https://download.lxcloud.com", tags: ["下载", "bt", "种子"], sort_order: 0 },
-      { id: "postgres", name: "PostgreSQL", desc: "数据库管理", icon: "Database", category: "基础设施", url_internal: "http://192.168.1.5:5432", url_external: "https://db.lxcloud.com", tags: ["数据库", "sql", "pg"], sort_order: 0 },
-      { id: "settings", name: "系统设置", desc: "路由器和系统配置", icon: "Settings", category: "管理", url_internal: "http://192.168.1.1", url_external: "https://admin.lxcloud.com", tags: ["配置", "管理", "系统"], sort_order: 0 },
-      { id: "docs", name: "文档中心", desc: "项目文档和笔记", icon: "FileText", category: "资源", url_internal: "http://192.168.1.5:3000/docs", url_external: "https://docs.lxcloud.com", tags: ["文档", "wiki", "知识"], sort_order: 0 },
-    ];
-
-    const stmt = db.prepare(`
-      INSERT INTO sites (id, name, desc, icon, category, url_internal, url_external, tags, sort_order, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    `);
-
-    const insertAll = db.transaction((items: SiteInput[]) => {
-      for (const s of items) {
-        stmt.run(s.id, s.name, s.desc, s.icon, s.category, s.url_internal, s.url_external, JSON.stringify(s.tags || []), s.sort_order ?? 0);
-      }
-    });
-
-    insertAll(seeds);
-  }
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace(' ', 'T');
+  const result = db.prepare("UPDATE sites SET category = ?, updated_at = ? WHERE category = ?").run(newName, now, oldName);
+  return result.changes;
 }
+
+export function deleteCategory(name: string): number {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM sites WHERE category = ?").run(name);
+  return result.changes;
+}
+
