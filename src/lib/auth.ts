@@ -31,7 +31,7 @@ export async function login(password: string): Promise<boolean> {
   const jar = await cookies();
   jar.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: false,
     sameSite: "lax",
     maxAge: SESSION_MAX_AGE,
     path: "/",
