@@ -16,7 +16,7 @@ export default async function LoginPage() {
       <div className="w-full max-w-xs">
         <div className="mb-8 flex flex-col items-center gap-3">
           <div className="flex size-12 items-center justify-center rounded-xl bg-foreground">
-            <Terminal className="size-5 text-background" />
+            <Terminal className="size-6 text-background" />
           </div>
           <div className="text-center">
             <h1 className="text-base font-semibold">{needSetup ? "设置管理密码" : "管理员登录"}</h1>

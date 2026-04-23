@@ -40,7 +40,7 @@ export function LoginForm({ needSetup }: { needSetup: boolean }) {
           className="h-9"
         />
       )}
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button type="submit" className="w-full bg-[oklch(0.65_0.10_155)] text-white hover:bg-[oklch(0.60_0.10_155)]" disabled={pending}>
         {pending && <Loader2 className="mr-1.5 size-3 animate-spin" />}
         {needSetup ? "设置密码" : "登录"}
       </Button>
