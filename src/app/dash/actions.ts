@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { isAuthenticated } from "@/lib/auth";
 import {
+  isAuthDisabled,
   createSite,
   updateSite,
   deleteSite,
@@ -38,7 +39,7 @@ function validate(data: SiteFormInput): string | null {
 }
 
 async function requireAuth(): Promise<ActionResult | null> {
-  if (!(await isAuthenticated())) return { success: false, error: "未登录" };
+  if (!isAuthDisabled() && !(await isAuthenticated())) return { success: false, error: "未登录" };
   return null;
 }
 
@@ -132,7 +133,7 @@ export async function deleteCategoryAction(name: string): Promise<ActionResult> 
 
 // 抓取 favicon 并保存到本地文件
 export async function fetchFaviconAction(url: string): Promise<{ success: true; data: string } | { success: false; error: string }> {
-  if (!(await isAuthenticated())) return { success: false, error: "未登录" };
+  if (!isAuthDisabled() && !(await isAuthenticated())) return { success: false, error: "未登录" };
   try {
     const { origin, hostname, protocol } = new URL(url);
     const tryFetch = async (u: string): Promise<Buffer | null> => {

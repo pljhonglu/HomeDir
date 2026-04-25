@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
-  allowedDevOrigins: ["*"],
+  allowedDevOrigins: ["192.168.50.139"],
   images: {
     unoptimized: true,
   },

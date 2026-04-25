@@ -127,6 +127,10 @@ const defaultConfig: SiteConfig = {
   admin_session: "",
 };
 
+export function isAuthDisabled(): boolean {
+  return process.env.DISABLE_AUTH === "true";
+}
+
 export function getConfig(): SiteConfig {
   const db = getDb();
   const rows = db.prepare("SELECT key, value FROM config").all() as { key: string; value: string }[];

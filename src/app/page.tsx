@@ -1,4 +1,5 @@
-import { Terminal } from "lucide-react";
+import { Terminal, Settings } from "lucide-react";
+import Link from "next/link";
 import { GithubIcon } from "@/components/icons/github";
 import { getSites } from "@/lib/sites";
 import { HomePage } from "@/components/home-page";
@@ -17,6 +18,9 @@ export default async function Page() {
         <a href="https://github.com/52Lxcloud/HomeDir" target="_blank" rel="noopener noreferrer" className="text-muted-foreground/50 transition-colors hover:text-muted-foreground">
           <GithubIcon className="size-4" />
         </a>
+        <Link href="/dash" className="text-muted-foreground/50 transition-colors hover:text-muted-foreground">
+          <Settings className="size-4" />
+        </Link>
       </header>
 
       {/* 交互区域 — Client Component */}

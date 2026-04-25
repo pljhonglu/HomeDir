@@ -7,6 +7,7 @@ import { getSites } from "@/lib/sites";
 import { getAllShortcuts } from "@/lib/db";
 import { AdminPanel } from "@/components/admin-panel";
 import { isAuthenticated, hasPassword } from "@/lib/auth";
+import { isAuthDisabled } from "@/lib/db";
 import { logoutAction } from "./login/actions";
 
 export const metadata: Metadata = {
@@ -16,7 +17,9 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  if (!hasPassword() || !(await isAuthenticated())) redirect("/dash/login");
+  if (!isAuthDisabled() && (!hasPassword() || !(await isAuthenticated()))) {
+    redirect("/dash/login");
+  }
 
   const { sites, categories, config } = getSites();
   const shortcuts = getAllShortcuts().map((s) => ({ id: s.id, key: s.key, site_id: s.site_id }));
@@ -37,11 +40,13 @@ export default async function AdminPage() {
           </Button>
         </Link>
         <h1 className="flex-1 text-sm font-semibold">站点管理</h1>
-        <form action={logoutAction}>
-          <Button variant="ghost" size="icon-sm" className="text-muted-foreground">
-            <LogOut className="size-3.5" />
-          </Button>
-        </form>
+        {!isAuthDisabled() && (
+          <form action={logoutAction}>
+            <Button variant="ghost" size="icon-sm" className="text-muted-foreground">
+              <LogOut className="size-3.5" />
+            </Button>
+          </form>
+        )}
       </div>
 
       <AdminPanel sites={sites} categories={categories} config={safeConfig} shortcuts={shortcuts} />

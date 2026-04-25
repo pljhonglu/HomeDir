@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 import { Terminal } from "lucide-react";
 import { hasPassword, isAuthenticated } from "@/lib/auth";
+import { isAuthDisabled } from "@/lib/db";
 import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
-  // 已登录则跳转
+  if (isAuthDisabled()) redirect("/dash");
   if (await isAuthenticated()) redirect("/dash");
 
   const needSetup = !hasPassword();
