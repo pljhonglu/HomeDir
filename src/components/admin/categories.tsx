@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Pencil, Trash2, Loader2, Save, AlertTriangle, Star, GripVertical } from "lucide-react";
 
-export function AdminCategories({ sites, defaultCategory }: { sites: SiteData[]; defaultCategory: string | null }) {
+export function AdminCategories({ sites, categories, defaultCategory }: { sites: SiteData[]; categories: string[]; defaultCategory: string | null }) {
   const categoryStats = useMemo(() => {
     const map = new Map<string, number>();
     for (const s of sites) map.set(s.category, (map.get(s.category) || 0) + 1);
@@ -30,7 +30,7 @@ export function AdminCategories({ sites, defaultCategory }: { sites: SiteData[];
 
   // 拖拽排序
   const [orderedCategories, setOrderedCategories] = useState<string[]>(() =>
-    categoryStats.map(([cat]) => cat)
+    categories
   );
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);

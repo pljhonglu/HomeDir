@@ -99,7 +99,7 @@ export function AdminPanel({
         <AdminSites sites={sites} categories={categories} />
       )}
       {tab === "categories" && (
-        <AdminCategories sites={sites} defaultCategory={defaultCategory} />
+        <AdminCategories sites={sites} categories={categories} defaultCategory={defaultCategory} />
       )}
       {tab === "shortcuts" && (
         <AdminShortcuts shortcuts={shortcuts} sites={sites} />
