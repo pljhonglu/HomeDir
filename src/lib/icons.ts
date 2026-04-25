@@ -14,14 +14,4 @@ export function getIconUrl(iconUrl: string): string {
 }
 
 // 动态获取所有 lucide 图标名称
-function getAllLucideIconNames(): string[] {
-  const names: string[] = [];
-  for (const [key, value] of Object.entries(LucideIcons)) {
-    if (typeof value === "function" && key[0] === key[0].toUpperCase() && key[0] !== "_") {
-      names.push(key);
-    }
-  }
-  return names.sort();
-}
-
-export const commonIcons = getAllLucideIconNames();
+export const commonIcons = Object.keys(LucideIcons.icons).sort();
