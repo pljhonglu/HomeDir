@@ -21,7 +21,7 @@ export default async function AdminPage() {
     redirect("/dash/login");
   }
 
-  const { sites, categories, config } = getSites();
+  const { sites, categories, config, defaultCategory } = getSites();
   const shortcuts = getAllShortcuts().map((s) => ({ id: s.id, key: s.key, site_id: s.site_id }));
 
   // 过滤敏感字段，只传展示用的配置给客户端
@@ -49,7 +49,7 @@ export default async function AdminPage() {
         )}
       </div>
 
-      <AdminPanel sites={sites} categories={categories} config={safeConfig} shortcuts={shortcuts} />
+      <AdminPanel sites={sites} categories={categories} config={safeConfig} shortcuts={shortcuts} defaultCategory={defaultCategory} />
     </div>
   );
 }

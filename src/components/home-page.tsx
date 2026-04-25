@@ -159,12 +159,14 @@ export function HomePage({
   sites,
   categories,
   shortcuts,
+  defaultCategory,
 }: {
   sites: SiteData[];
   categories: string[];
   shortcuts: ShortcutConfig[];
+  defaultCategory: string | null;
 }) {
-  const [active, setActive] = useState(ALL);
+  const [active, setActive] = useState(defaultCategory && categories.includes(defaultCategory) ? defaultCategory : ALL);
   const [isInternal, setIsInternal] = useState(true);
   const [manualOverride, setManualOverride] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);

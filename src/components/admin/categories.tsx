@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import type { SiteData } from "@/lib/types";
 import { getIcon, getIconUrl } from "@/lib/icons";
 import {
   renameCategoryAction,
   deleteCategoryAction,
+  setCategoryOrderAction,
+  setDefaultCategoryAction,
 } from "@/app/dash/actions";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,14 +19,91 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Pencil, Trash2, Loader2, Save, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, Loader2, Save, AlertTriangle, Star, GripVertical } from "lucide-react";
 
-export function AdminCategories({ sites }: { sites: SiteData[] }) {
+export function AdminCategories({ sites, defaultCategory }: { sites: SiteData[]; defaultCategory: string | null }) {
   const categoryStats = useMemo(() => {
     const map = new Map<string, number>();
     for (const s of sites) map.set(s.category, (map.get(s.category) || 0) + 1);
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [sites]);
+
+  // 拖拽排序
+  const [orderedCategories, setOrderedCategories] = useState<string[]>(() =>
+    categoryStats.map(([cat]) => cat)
+  );
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [savingOrder, setSavingOrder] = useState(false);
+
+  // 同步新增的分类（当有新站点创建了新分类时）
+  useEffect(() => {
+    const currentCats = new Set(orderedCategories);
+    const newCats = categoryStats
+      .map(([cat]) => cat)
+      .filter((cat) => !currentCats.has(cat));
+    if (newCats.length > 0) {
+      setOrderedCategories((prev) => [...prev, ...newCats]);
+    }
+  }, [categoryStats]);
+
+  const handleDragStart = (idx: number) => {
+    setDraggedIdx(idx);
+  };
+
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === idx) return;
+    setDragOverIdx(idx);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIdx: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === targetIdx) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+
+    const newOrder = [...orderedCategories];
+    const [moved] = newOrder.splice(draggedIdx, 1);
+    newOrder.splice(targetIdx, 0, moved);
+    setOrderedCategories(newOrder);
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+
+    setSavingOrder(true);
+    try {
+      const result = await setCategoryOrderAction(newOrder);
+      if (!result.success) { toast.error(result.error); return; }
+      toast.success("分类排序已保存");
+    } finally { setSavingOrder(false); }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  // 设置默认分类
+  const [settingDefault, setSettingDefault] = useState(false);
+  const handleSetDefault = useCallback(async (cat: string) => {
+    setSettingDefault(true);
+    try {
+      const result = await setDefaultCategoryAction(cat);
+      if (!result.success) { toast.error(result.error); return; }
+      toast.success(`已将「${cat}」设为默认分类`);
+    } finally { setSettingDefault(false); }
+  }, []);
+
+  const handleClearDefault = useCallback(async () => {
+    setSettingDefault(true);
+    try {
+      const result = await setDefaultCategoryAction(null);
+      if (!result.success) { toast.error(result.error); return; }
+      toast.success("已清除默认分类");
+    } finally { setSettingDefault(false); }
+  }, []);
 
   // 重命名
   const [renameTarget, setRenameTarget] = useState<string | null>(null);
@@ -44,6 +123,7 @@ export function AdminCategories({ sites }: { sites: SiteData[] }) {
       if (!result.success) { toast.error(result.error); return; }
       toast.success(`已重命名为「${renameValue}」`);
       setRenameTarget(null);
+      setOrderedCategories(prev => prev.map(c => c === renameTarget ? renameValue : c));
     } finally { setRenaming(false); }
   }, [renameTarget, renameValue]);
 
@@ -58,31 +138,63 @@ export function AdminCategories({ sites }: { sites: SiteData[] }) {
       const result = await deleteCategoryAction(deleteTarget);
       if (!result.success) { toast.error(result.error); return; }
       toast.success("分类及其站点已删除");
+      setOrderedCategories(prev => prev.filter(c => c !== deleteTarget));
       setDeleteTarget(null);
     } finally { setDeletingItem(false); }
   }, [deleteTarget]);
 
   return (
     <>
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">拖拽排序，Star 设为默认分类</p>
+        {savingOrder && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {categoryStats.length === 0 ? (
           <div className="col-span-full rounded-lg border border-dashed py-16 text-center text-sm text-muted-foreground">
             暂无分类
           </div>
         ) : (
-          categoryStats.map(([cat, count]) => {
+          orderedCategories.map((cat, idx) => {
+            const count = categoryStats.find(([c]) => c === cat)?.[1] || 0;
             const catSites = sites.filter((s) => s.category === cat);
+            const isDefault = defaultCategory === cat;
+            const isDragging = draggedIdx === idx;
+            const isDragOver = dragOverIdx === idx;
+
             return (
               <div
                 key={cat}
-                className="group rounded-lg border bg-card p-4 transition-colors hover:bg-accent/20"
+                draggable
+                onDragStart={() => handleDragStart(idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragEnd={handleDragEnd}
+                className={`group rounded-lg border bg-card p-4 transition-all hover:bg-accent/20 ${
+                  isDragging ? "opacity-50" : ""
+                } ${isDragOver ? "ring-2 ring-primary" : ""}`}
               >
                 <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">{cat}</div>
-                    <div className="text-xs text-muted-foreground">{count} 个站点</div>
+                  <div className="flex items-center gap-2">
+                    <GripVertical className="size-3.5 cursor-grab text-muted-foreground/50" />
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-medium">{cat}</span>
+                        {isDefault && <Star className="size-3 fill-yellow-400 text-yellow-400" />}
+                      </div>
+                      <div className="text-xs text-muted-foreground">{count} 个站点</div>
+                    </div>
                   </div>
                   <div className="flex gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => isDefault ? handleClearDefault() : handleSetDefault(cat)}
+                      disabled={settingDefault}
+                      title={isDefault ? "取消默认" : "设为默认"}
+                    >
+                      <Star className={`size-3.5 ${isDefault ? "fill-yellow-400 text-yellow-400" : ""}`} />
+                    </Button>
                     <Button variant="ghost" size="icon-sm" onClick={() => openRename(cat)}>
                       <Pencil className="size-3.5" />
                     </Button>

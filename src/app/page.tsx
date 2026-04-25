@@ -7,7 +7,7 @@ import { HomePage } from "@/components/home-page";
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const { sites, categories, config, shortcuts } = getSites();
+  const { sites, categories, config, shortcuts, defaultCategory } = getSites();
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-5xl flex-col px-4 pt-8 sm:px-6 lg:px-8">
@@ -25,7 +25,7 @@ export default async function Page() {
 
       {/* 交互区域 — Client Component */}
       <div className="flex-1">
-        <HomePage sites={sites} categories={categories} shortcuts={shortcuts} />
+        <HomePage sites={sites} categories={categories} shortcuts={shortcuts} defaultCategory={defaultCategory} />
       </div>
 
       {/* 底部 */}

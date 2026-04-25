@@ -29,11 +29,13 @@ export function AdminPanel({
   categories,
   config,
   shortcuts,
+  defaultCategory,
 }: {
   sites: SiteData[];
   categories: string[];
   config: SafeConfig;
   shortcuts: ShortcutData[];
+  defaultCategory: string | null;
 }) {
   const [tab, setTabState] = useState<Tab>("overview");
   const [mounted, setMounted] = useState(false);
@@ -97,7 +99,7 @@ export function AdminPanel({
         <AdminSites sites={sites} categories={categories} />
       )}
       {tab === "categories" && (
-        <AdminCategories sites={sites} />
+        <AdminCategories sites={sites} defaultCategory={defaultCategory} />
       )}
       {tab === "shortcuts" && (
         <AdminShortcuts shortcuts={shortcuts} sites={sites} />

@@ -246,3 +246,34 @@ export function deleteCategory(name: string): number {
   return result.changes;
 }
 
+export function getCategoryOrder(): string[] {
+  const db = getDb();
+  const row = db.prepare("SELECT value FROM config WHERE key = ?").get("category_order") as { value: string } | undefined;
+  if (!row || !row.value) return [];
+  try {
+    return JSON.parse(row.value);
+  } catch {
+    return [];
+  }
+}
+
+export function setCategoryOrder(order: string[]): void {
+  const db = getDb();
+  db.prepare("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)").run("category_order", JSON.stringify(order));
+}
+
+export function getDefaultCategory(): string | null {
+  const db = getDb();
+  const row = db.prepare("SELECT value FROM config WHERE key = ?").get("default_category") as { value: string } | undefined;
+  return row?.value || null;
+}
+
+export function setDefaultCategory(category: string | null): void {
+  const db = getDb();
+  if (category) {
+    db.prepare("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)").run("default_category", category);
+  } else {
+    db.prepare("DELETE FROM config WHERE key = ?").run("default_category");
+  }
+}
+

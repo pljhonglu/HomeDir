@@ -1,9 +1,9 @@
 import "server-only";
-import { getAllSites, getConfig, getAllShortcuts } from "@/lib/db";
+import { getAllSites, getConfig, getAllShortcuts, getCategoryOrder, getDefaultCategory } from "@/lib/db";
 import type { SiteData, ShortcutConfig } from "@/lib/types";
 import type { SiteConfig } from "@/lib/db";
 
-export function getSites(): { sites: SiteData[]; categories: string[]; config: SiteConfig; shortcuts: ShortcutConfig[] } {
+export function getSites(): { sites: SiteData[]; categories: string[]; config: SiteConfig; shortcuts: ShortcutConfig[]; defaultCategory: string | null } {
   const rows = getAllSites();
   const config = getConfig();
 
@@ -19,8 +19,20 @@ export function getSites(): { sites: SiteData[]; categories: string[]; config: S
     created_at: r.created_at,
   }));
 
-  const categories = Array.from(new Set(sites.map((s) => s.category))).sort();
+  const categorySet = new Set(sites.map((s) => s.category));
+  const savedOrder = getCategoryOrder();
+  const defaultCategory = getDefaultCategory();
+
+  const sortedCategories = Array.from(categorySet).sort((a, b) => {
+    const aIdx = savedOrder.indexOf(a);
+    const bIdx = savedOrder.indexOf(b);
+    if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+    if (aIdx === -1) return 1;
+    if (bIdx === -1) return -1;
+    return aIdx - bIdx;
+  });
+
   const shortcuts = getAllShortcuts().map((s) => ({ key: s.key, site_id: s.site_id }));
 
-  return { sites, categories, config, shortcuts };
+  return { sites, categories: sortedCategories, config, shortcuts, defaultCategory };
 }

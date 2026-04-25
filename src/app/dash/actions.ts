@@ -13,6 +13,10 @@ import {
   createShortcut,
   deleteShortcut,
   getAllShortcuts,
+  getCategoryOrder,
+  setCategoryOrder,
+  getDefaultCategory,
+  setDefaultCategory,
 } from "@/lib/db";
 import type { SiteConfig } from "@/lib/db";
 import { saveIcon } from "@/lib/icons-fs";
@@ -237,5 +241,34 @@ export async function updateConfigAction(config: Partial<SiteConfig>): Promise<A
   } catch (e) {
     console.error("保存配置失败:", e);
     return { success: false, error: "保存配置失败" };
+  }
+}
+
+// 分类排序和默认分类操作
+export async function setCategoryOrderAction(order: string[]): Promise<ActionResult> {
+  const authErr = await requireAuth();
+  if (authErr) return authErr;
+  try {
+    setCategoryOrder(order);
+    revalidatePath("/");
+    revalidatePath("/dash");
+    return { success: true };
+  } catch (e) {
+    console.error("保存分类排序失败:", e);
+    return { success: false, error: "保存分类排序失败" };
+  }
+}
+
+export async function setDefaultCategoryAction(category: string | null): Promise<ActionResult> {
+  const authErr = await requireAuth();
+  if (authErr) return authErr;
+  try {
+    setDefaultCategory(category);
+    revalidatePath("/");
+    revalidatePath("/dash");
+    return { success: true };
+  } catch (e) {
+    console.error("保存默认分类失败:", e);
+    return { success: false, error: "保存默认分类失败" };
   }
 }
