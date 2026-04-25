@@ -17,6 +17,7 @@ import {
   setCategoryOrder,
   getDefaultCategory,
   setDefaultCategory,
+  updateSiteSortOrders,
 } from "@/lib/db";
 import type { SiteConfig } from "@/lib/db";
 import { saveIcon } from "@/lib/icons-fs";
@@ -270,5 +271,19 @@ export async function setDefaultCategoryAction(category: string | null): Promise
   } catch (e) {
     console.error("保存默认分类失败:", e);
     return { success: false, error: "保存默认分类失败" };
+  }
+}
+
+export async function updateSiteSortOrdersAction(updates: { id: string; sort_order: number }[]): Promise<ActionResult> {
+  const authErr = await requireAuth();
+  if (authErr) return authErr;
+  try {
+    updateSiteSortOrders(updates);
+    revalidatePath("/");
+    revalidatePath("/dash");
+    return { success: true };
+  } catch (e) {
+    console.error("保存站点排序失败:", e);
+    return { success: false, error: "保存站点排序失败" };
   }
 }

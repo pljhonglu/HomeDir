@@ -228,8 +228,19 @@ export function updateSite(id: string, input: Partial<SiteInput>): SiteRow | nul
 export function deleteSite(id: string): boolean {
   const db = getDb();
   const result = db.prepare("DELETE FROM sites WHERE id = ?").run(id);
-
   return result.changes > 0;
+}
+
+export function updateSiteSortOrders(updates: { id: string; sort_order: number }[]): void {
+  const db = getDb();
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace(' ', 'T');
+  const stmt = db.prepare("UPDATE sites SET sort_order = ?, updated_at = ? WHERE id = ?");
+  const run = db.transaction((items: { id: string; sort_order: number }[]) => {
+    for (const item of items) {
+      stmt.run(item.sort_order, now, item.id);
+    }
+  });
+  run(updates);
 }
 
 // 分类操作

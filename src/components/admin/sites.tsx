@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { SiteData } from "@/lib/types";
 import { getIcon, getIconUrl, commonIcons } from "@/lib/icons";
 import {
@@ -8,6 +8,7 @@ import {
   updateSiteAction,
   deleteSiteAction,
   fetchFaviconAction,
+  updateSiteSortOrdersAction,
 } from "@/app/dash/actions";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Loader2, Save, AlertTriangle, ChevronRight, ImageDown, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Save, AlertTriangle, ChevronRight, ImageDown, X, GripVertical } from "lucide-react";
 
 interface SiteFormData {
   name: string;
@@ -68,6 +69,68 @@ export function AdminSites({
   const [deleting, setDeleting] = useState(false);
   const [fetchingIcon, setFetchingIcon] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  // 拖拽排序
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, siteId: string) => {
+    setDraggedId(siteId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, siteId: string) => {
+    e.preventDefault();
+    if (draggedId === null || draggedId === siteId) return;
+    setDragOverId(siteId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverId(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetSite: SiteData, categorySites: SiteData[]) => {
+    e.preventDefault();
+    if (draggedId === null || draggedId === targetSite.id) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const currentOrder = categorySites.map(s => s.id);
+    const draggedIdx = currentOrder.indexOf(draggedId);
+    const targetIdx = currentOrder.indexOf(targetSite.id);
+
+    if (draggedIdx === -1 || targetIdx === -1) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    // Reorder
+    const newOrder = [...currentOrder];
+    const [moved] = newOrder.splice(draggedIdx, 1);
+    newOrder.splice(targetIdx, 0, moved);
+
+    // Update sort_order for all sites in this category
+    const updates = newOrder.map((id, idx) => ({ id, sort_order: idx }));
+    setDraggedId(null);
+    setDragOverId(null);
+
+    try {
+      const result = await updateSiteSortOrdersAction(updates);
+      if (!result.success) {
+        toast.error(result.error);
+      }
+    } catch (err) {
+      toast.error("保存排序失败");
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
 
   const toggleGroup = (cat: string) => {
     setCollapsed((prev) => {
@@ -194,13 +257,22 @@ export function AdminSites({
                   <div>
                     {group.map((site, i) => {
                       const Icon = getIcon(site.icon);
+                      const isDragging = draggedId === site.id;
+                      const isDragOver = dragOverId === site.id;
                       return (
                         <div
                           key={site.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, site.id)}
+                          onDragOver={(e) => handleDragOver(e, site.id)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, site, group)}
+                          onDragEnd={handleDragEnd}
                           className={`group flex items-center gap-3 px-3.5 py-2 transition-colors hover:bg-accent/20 ${
                             i !== group.length - 1 ? "border-b" : ""
-                          }`}
+                          } ${isDragging ? "opacity-50" : ""} ${isDragOver ? "border-l-2 border-l-primary bg-accent/10" : ""}`}
                         >
+                          <GripVertical className="size-3.5 cursor-grab shrink-0 text-muted-foreground/40" />
                           {site.icon_url ? (
                             <img src={getIconUrl(site.icon_url)} alt="" className="size-4 shrink-0 rounded object-contain" />
                           ) : (
