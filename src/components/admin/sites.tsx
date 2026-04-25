@@ -261,8 +261,8 @@ export function AdminSites({
                 <SelectTrigger className="size-8 shrink-0 items-center justify-center gap-0 p-0 [&>svg:last-child]:hidden">
                   {(() => { const Ic = getIcon(form.icon); return <Ic className="size-4" />; })()}
                 </SelectTrigger>
-                <SelectContent position="popper" side="bottom" align="start" className="max-h-52 w-auto min-w-0">
-                  <div className="grid grid-cols-6 gap-0.5 p-1">
+                <SelectContent position="popper" side="bottom" align="start" className="max-h-80 w-auto min-w-0">
+                  <div className="grid grid-cols-8 gap-0.5 p-1">
                     {commonIcons.map((name) => {
                       const Ic = getIcon(name);
                       return (
