@@ -18,6 +18,9 @@ import {
   getDefaultCategory,
   setDefaultCategory,
   updateSiteSortOrders,
+  createApiKey,
+  listApiKeys,
+  deleteApiKey,
 } from "@/lib/db";
 import type { SiteConfig } from "@/lib/db";
 import { saveIcon } from "@/lib/icons-fs";
@@ -285,5 +288,46 @@ export async function updateSiteSortOrdersAction(updates: { id: string; sort_ord
   } catch (e) {
     console.error("保存站点排序失败:", e);
     return { success: false, error: "保存站点排序失败" };
+  }
+}
+
+// API Key 操作
+export async function createApiKeyAction(name: string): Promise<{ success: true; data: { id: string; name: string; key: string; prefix: string; created_at: string } } | { success: false; error: string }> {
+  if (!isAuthDisabled() && !(await isAuthenticated())) return { success: false, error: "未登录" };
+  if (!name || !name.trim()) return { success: false, error: "名称不能为空" };
+  if (name.trim().length > 50) return { success: false, error: "名称不能超过 50 个字符" };
+  try {
+    const result = createApiKey(name);
+    revalidatePath("/dash");
+    return { success: true, data: result };
+  } catch (e) {
+    console.error("创建 API Key 失败:", e);
+    return { success: false, error: "创建 API Key 失败" };
+  }
+}
+
+export async function listApiKeysAction(): Promise<{ success: true; data: { id: string; name: string; prefix: string; created_at: string; last_used_at: string | null }[] } | { success: false; error: string }> {
+  if (!isAuthDisabled() && !(await isAuthenticated())) return { success: false, error: "未登录" };
+  try {
+    const keys = listApiKeys();
+    return { success: true, data: keys };
+  } catch (e) {
+    console.error("获取 API Key 列表失败:", e);
+    return { success: false, error: "获取 API Key 列表失败" };
+  }
+}
+
+export async function deleteApiKeyAction(id: string): Promise<ActionResult> {
+  const authErr = await requireAuth();
+  if (authErr) return authErr;
+  if (!id) return { success: false, error: "ID 不能为空" };
+  try {
+    const ok = deleteApiKey(id);
+    if (!ok) return { success: false, error: "API Key 不存在" };
+    revalidatePath("/dash");
+    return { success: true };
+  } catch (e) {
+    console.error("删除 API Key 失败:", e);
+    return { success: false, error: "删除 API Key 失败" };
   }
 }

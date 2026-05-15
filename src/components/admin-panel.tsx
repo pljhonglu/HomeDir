@@ -9,17 +9,19 @@ import { AdminCategories } from "@/components/admin/categories";
 import { AdminSettings } from "@/components/admin/settings";
 import { AdminShortcuts } from "@/components/admin/shortcuts";
 import type { ShortcutData } from "@/components/admin/shortcuts";
+import { AdminApiKeys } from "@/components/admin/api-keys";
 import { AdminAbout } from "@/components/admin/about";
-import { BarChart3, LayoutGrid, Layers, Settings, Keyboard, Info } from "lucide-react";
+import { BarChart3, LayoutGrid, Layers, Settings, Keyboard, Key, Info } from "lucide-react";
 
-type Tab = "overview" | "sites" | "categories" | "shortcuts" | "settings" | "about";
-const validTabs: Tab[] = ["overview", "sites", "categories", "shortcuts", "settings", "about"];
+type Tab = "overview" | "sites" | "categories" | "shortcuts" | "apikeys" | "settings" | "about";
+const validTabs: Tab[] = ["overview", "sites", "categories", "shortcuts", "apikeys", "settings", "about"];
 
 const tabs = [
   { key: "overview" as const, label: "概览", icon: BarChart3 },
   { key: "sites" as const, label: "站点", icon: LayoutGrid },
   { key: "categories" as const, label: "分类", icon: Layers },
   { key: "shortcuts" as const, label: "热键", icon: Keyboard },
+  { key: "apikeys" as const, label: "API", icon: Key },
   { key: "settings" as const, label: "配置", icon: Settings },
   { key: "about" as const, label: "关于", icon: Info },
 ];
@@ -65,7 +67,7 @@ export function AdminPanel({
   if (!mounted) {
     return (
       <div className="mb-6 flex animate-pulse items-center gap-1 rounded-lg border bg-muted/30 p-1">
-        {Array.from({ length: 6 }).map((_, i) => (
+        {Array.from({ length: 7 }).map((_, i) => (
           <div key={i} className="h-7 w-16 rounded-md bg-muted/50" />
         ))}
       </div>
@@ -103,6 +105,9 @@ export function AdminPanel({
       )}
       {tab === "shortcuts" && (
         <AdminShortcuts shortcuts={shortcuts} sites={sites} />
+      )}
+      {tab === "apikeys" && (
+        <AdminApiKeys />
       )}
       {tab === "settings" && (
         <AdminSettings config={config} />

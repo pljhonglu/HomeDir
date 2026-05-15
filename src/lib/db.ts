@@ -1,6 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import { createHash, randomBytes } from "crypto";
 
 interface SiteRow {
   id: string;
@@ -78,6 +79,18 @@ function getDb() {
       site_id TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (site_id) REFERENCES sites(id) ON DELETE CASCADE
+    )
+  `);
+
+  // API Key 表
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      key_hash TEXT NOT NULL UNIQUE,
+      prefix TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_used_at TEXT
     )
   `);
 
@@ -286,5 +299,62 @@ export function setDefaultCategory(category: string | null): void {
   } else {
     db.prepare("DELETE FROM config WHERE key = ?").run("default_category");
   }
+}
+
+// API Key 操作
+export interface ApiKeyRow {
+  id: string;
+  name: string;
+  key_hash: string;
+  prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface ApiKeyCreated {
+  id: string;
+  name: string;
+  key: string;
+  prefix: string;
+  created_at: string;
+}
+
+function hashKey(key: string): string {
+  return createHash("sha256").update(key).digest("hex");
+}
+
+export function createApiKey(name: string): ApiKeyCreated {
+  const db = getDb();
+  const id = genId();
+  const rawKey = `hd_${randomBytes(24).toString("hex")}`;
+  const keyHash = hashKey(rawKey);
+  const prefix = rawKey.slice(0, 7);
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace(' ', 'T');
+
+  db.prepare("INSERT INTO api_keys (id, name, key_hash, prefix, created_at) VALUES (?, ?, ?, ?, ?)")
+    .run(id, name.trim(), keyHash, prefix, now);
+
+  return { id, name: name.trim(), key: rawKey, prefix, created_at: now };
+}
+
+export function listApiKeys(): Omit<ApiKeyRow, "key_hash">[] {
+  const db = getDb();
+  return db.prepare("SELECT id, name, prefix, created_at, last_used_at FROM api_keys ORDER BY created_at DESC")
+    .all() as Omit<ApiKeyRow, "key_hash">[];
+}
+
+export function deleteApiKey(id: string): boolean {
+  const db = getDb();
+  return db.prepare("DELETE FROM api_keys WHERE id = ?").run(id).changes > 0;
+}
+
+export function verifyApiKey(rawKey: string): boolean {
+  const db = getDb();
+  const keyHash = hashKey(rawKey);
+  const row = db.prepare("SELECT id FROM api_keys WHERE key_hash = ?").get(keyHash) as { id: string } | undefined;
+  if (!row) return false;
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace(' ', 'T');
+  db.prepare("UPDATE api_keys SET last_used_at = ? WHERE id = ?").run(now, row.id);
+  return true;
 }
 
