@@ -10,6 +10,12 @@ export interface SiteData {
   created_at: string;
 }
 
+export interface VariableData {
+  id: string;
+  name: string;
+  value: string;
+}
+
 export interface ShortcutConfig {
   key: string;
   site_id: string;

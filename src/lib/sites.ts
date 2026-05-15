@@ -1,11 +1,12 @@
 import "server-only";
-import { getAllSites, getConfig, getAllShortcuts, getCategoryOrder, getDefaultCategory } from "@/lib/db";
-import type { SiteData, ShortcutConfig } from "@/lib/types";
+import { getAllSites, getConfig, getAllShortcuts, getCategoryOrder, getDefaultCategory, getAllVariables } from "@/lib/db";
+import type { SiteData, ShortcutConfig, VariableData } from "@/lib/types";
 import type { SiteConfig } from "@/lib/db";
 
-export function getSites(): { sites: SiteData[]; categories: string[]; config: SiteConfig; shortcuts: ShortcutConfig[]; defaultCategory: string | null } {
+export function getSites(): { sites: SiteData[]; categories: string[]; config: SiteConfig; shortcuts: ShortcutConfig[]; defaultCategory: string | null; variables: VariableData[] } {
   const rows = getAllSites();
   const config = getConfig();
+  const variableRows = getAllVariables();
 
   const sites: SiteData[] = rows.map((r) => ({
     id: r.id,
@@ -33,6 +34,7 @@ export function getSites(): { sites: SiteData[]; categories: string[]; config: S
   });
 
   const shortcuts = getAllShortcuts().map((s) => ({ key: s.key, site_id: s.site_id }));
+  const variables: VariableData[] = variableRows.map((v) => ({ id: v.id, name: v.name, value: v.value }));
 
-  return { sites, categories: sortedCategories, config, shortcuts, defaultCategory };
+  return { sites, categories: sortedCategories, config, shortcuts, defaultCategory, variables };
 }

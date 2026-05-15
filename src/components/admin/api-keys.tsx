@@ -196,6 +196,14 @@ export function AdminApiKeys() {
             <div className="font-medium text-foreground/80">更新配置</div>
             <code className="block rounded bg-muted px-2 py-1 mt-1">PUT /openapi/config {"{ site_name, site_description, footer_text }"}</code>
           </div>
+          <div>
+            <div className="font-medium text-foreground/80">获取变量列表</div>
+            <code className="block rounded bg-muted px-2 py-1 mt-1">GET /openapi/variables</code>
+          </div>
+          <div>
+            <div className="font-medium text-foreground/80">修改变量值</div>
+            <code className="block rounded bg-muted px-2 py-1 mt-1">PUT /openapi/variables {"{ name, value }"}</code>
+          </div>
         </div>
       </div>
     </div>

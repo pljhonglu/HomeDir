@@ -94,6 +94,17 @@ function getDb() {
     )
   `);
 
+  // 自定义变量表
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS variables (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      value TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
   return _db;
 }
 
@@ -356,5 +367,58 @@ export function verifyApiKey(rawKey: string): boolean {
   const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace(' ', 'T');
   db.prepare("UPDATE api_keys SET last_used_at = ? WHERE id = ?").run(now, row.id);
   return true;
+}
+
+// 自定义变量操作
+export interface VariableRow {
+  id: string;
+  name: string;
+  value: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export function getAllVariables(): VariableRow[] {
+  const db = getDb();
+  return db.prepare("SELECT * FROM variables ORDER BY name").all() as VariableRow[];
+}
+
+export function createVariable(name: string, value: string): VariableRow {
+  const db = getDb();
+  const id = genId();
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace(' ', 'T');
+  db.prepare("INSERT INTO variables (id, name, value, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
+    .run(id, name.trim(), value, now, now);
+  return db.prepare("SELECT * FROM variables WHERE id = ?").get(id) as VariableRow;
+}
+
+export function updateVariable(id: string, updates: { name?: string; value?: string }): VariableRow | null {
+  const db = getDb();
+  const existing = db.prepare("SELECT * FROM variables WHERE id = ?").get(id) as VariableRow | undefined;
+  if (!existing) return null;
+
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace(' ', 'T');
+  const newName = (updates.name ?? existing.name).trim();
+  const newValue = updates.value ?? existing.value;
+
+  db.prepare("UPDATE variables SET name = ?, value = ?, updated_at = ? WHERE id = ?")
+    .run(newName, newValue, now, id);
+  return db.prepare("SELECT * FROM variables WHERE id = ?").get(id) as VariableRow;
+}
+
+export function updateVariableByName(name: string, value: string): VariableRow | null {
+  const db = getDb();
+  const existing = db.prepare("SELECT * FROM variables WHERE name = ?").get(name) as VariableRow | undefined;
+  if (!existing) return null;
+
+  const now = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Shanghai' }).replace(' ', 'T');
+  db.prepare("UPDATE variables SET value = ?, updated_at = ? WHERE name = ?")
+    .run(value, now, name);
+  return db.prepare("SELECT * FROM variables WHERE name = ?").get(name) as VariableRow;
+}
+
+export function deleteVariable(id: string): boolean {
+  const db = getDb();
+  return db.prepare("DELETE FROM variables WHERE id = ?").run(id).changes > 0;
 }
 

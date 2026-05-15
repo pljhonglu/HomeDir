@@ -21,6 +21,10 @@ import {
   createApiKey,
   listApiKeys,
   deleteApiKey,
+  getAllVariables,
+  createVariable,
+  updateVariable,
+  deleteVariable,
 } from "@/lib/db";
 import type { SiteConfig } from "@/lib/db";
 import { saveIcon } from "@/lib/icons-fs";
@@ -329,5 +333,62 @@ export async function deleteApiKeyAction(id: string): Promise<ActionResult> {
   } catch (e) {
     console.error("删除 API Key 失败:", e);
     return { success: false, error: "删除 API Key 失败" };
+  }
+}
+
+// 自定义变量操作
+export async function createVariableAction(name: string, value: string): Promise<ActionResult> {
+  const authErr = await requireAuth();
+  if (authErr) return authErr;
+  if (!name || !name.trim()) return { success: false, error: "变量名不能为空" };
+  if (name.trim().length > 50) return { success: false, error: "变量名不能超过 50 个字符" };
+  if (!/^[A-Za-z_]\w*$/.test(name.trim())) return { success: false, error: "变量名只能包含字母、数字和下划线，且必须以字母或下划线开头" };
+  try {
+    const existing = getAllVariables().find((v) => v.name === name.trim());
+    if (existing) return { success: false, error: "变量名已存在" };
+    createVariable(name.trim(), value);
+    revalidatePath("/");
+    revalidatePath("/dash");
+    return { success: true };
+  } catch (e) {
+    console.error("创建变量失败:", e);
+    return { success: false, error: "创建变量失败" };
+  }
+}
+
+export async function updateVariableAction(id: string, name: string, value: string): Promise<ActionResult> {
+  const authErr = await requireAuth();
+  if (authErr) return authErr;
+  if (!id) return { success: false, error: "变量 ID 不能为空" };
+  if (!name || !name.trim()) return { success: false, error: "变量名不能为空" };
+  if (name.trim().length > 50) return { success: false, error: "变量名不能超过 50 个字符" };
+  if (!/^[A-Za-z_]\w*$/.test(name.trim())) return { success: false, error: "变量名只能包含字母、数字和下划线，且必须以字母或下划线开头" };
+  try {
+    const duplicate = getAllVariables().find((v) => v.id !== id && v.name === name.trim());
+    if (duplicate) return { success: false, error: "变量名已存在" };
+    const result = updateVariable(id, { name: name.trim(), value });
+    if (!result) return { success: false, error: "变量不存在" };
+    revalidatePath("/");
+    revalidatePath("/dash");
+    return { success: true };
+  } catch (e) {
+    console.error("更新变量失败:", e);
+    return { success: false, error: "更新变量失败" };
+  }
+}
+
+export async function deleteVariableAction(id: string): Promise<ActionResult> {
+  const authErr = await requireAuth();
+  if (authErr) return authErr;
+  if (!id) return { success: false, error: "变量 ID 不能为空" };
+  try {
+    const ok = deleteVariable(id);
+    if (!ok) return { success: false, error: "变量不存在" };
+    revalidatePath("/");
+    revalidatePath("/dash");
+    return { success: true };
+  } catch (e) {
+    console.error("删除变量失败:", e);
+    return { success: false, error: "删除变量失败" };
   }
 }

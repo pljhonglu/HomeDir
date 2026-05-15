@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 import { getIcon, getIconUrl } from "@/lib/icons";
+import { resolveVariables } from "@/lib/utils";
 import type { SiteData } from "@/lib/types";
 import { Search } from "lucide-react";
 import {
@@ -19,12 +20,14 @@ export function SearchDialog({
   isInternal,
   open,
   onOpenChange,
+  variables,
 }: {
   sites: SiteData[];
   categories: string[];
   isInternal: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  variables: Record<string, string>;
 }) {
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -48,11 +51,12 @@ export function SearchDialog({
 
   const handleSelect = useCallback(
     (site: SiteData) => {
-      const url = (isInternal ? site.url.internal : site.url.external) || site.url.internal || site.url.external;
+      const rawUrl = (isInternal ? site.url.internal : site.url.external) || site.url.internal || site.url.external;
+      const url = resolveVariables(rawUrl, variables);
       window.open(url, "_blank", "noopener,noreferrer");
       onOpenChange(false);
     },
-    [isInternal, onOpenChange]
+    [isInternal, variables, onOpenChange]
   );
 
   return (

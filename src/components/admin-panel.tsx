@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import type { SiteData } from "@/lib/types";
+import type { SiteData, VariableData } from "@/lib/types";
 type SafeConfig = { site_name: string; site_description: string; footer_text: string };
 import { AdminOverview } from "@/components/admin/overview";
 import { AdminSites } from "@/components/admin/sites";
@@ -10,11 +10,12 @@ import { AdminSettings } from "@/components/admin/settings";
 import { AdminShortcuts } from "@/components/admin/shortcuts";
 import type { ShortcutData } from "@/components/admin/shortcuts";
 import { AdminApiKeys } from "@/components/admin/api-keys";
+import { AdminVariables } from "@/components/admin/variables";
 import { AdminAbout } from "@/components/admin/about";
-import { BarChart3, LayoutGrid, Layers, Settings, Keyboard, Key, Info } from "lucide-react";
+import { BarChart3, LayoutGrid, Layers, Settings, Keyboard, Key, Info, Variable } from "lucide-react";
 
-type Tab = "overview" | "sites" | "categories" | "shortcuts" | "apikeys" | "settings" | "about";
-const validTabs: Tab[] = ["overview", "sites", "categories", "shortcuts", "apikeys", "settings", "about"];
+type Tab = "overview" | "sites" | "categories" | "shortcuts" | "apikeys" | "variables" | "settings" | "about";
+const validTabs: Tab[] = ["overview", "sites", "categories", "shortcuts", "apikeys", "variables", "settings", "about"];
 
 const tabs = [
   { key: "overview" as const, label: "概览", icon: BarChart3 },
@@ -22,6 +23,7 @@ const tabs = [
   { key: "categories" as const, label: "分类", icon: Layers },
   { key: "shortcuts" as const, label: "热键", icon: Keyboard },
   { key: "apikeys" as const, label: "API", icon: Key },
+  { key: "variables" as const, label: "变量", icon: Variable },
   { key: "settings" as const, label: "配置", icon: Settings },
   { key: "about" as const, label: "关于", icon: Info },
 ];
@@ -32,12 +34,14 @@ export function AdminPanel({
   config,
   shortcuts,
   defaultCategory,
+  variables,
 }: {
   sites: SiteData[];
   categories: string[];
   config: SafeConfig;
   shortcuts: ShortcutData[];
   defaultCategory: string | null;
+  variables: VariableData[];
 }) {
   const [tab, setTabState] = useState<Tab>("overview");
   const [mounted, setMounted] = useState(false);
@@ -67,7 +71,7 @@ export function AdminPanel({
   if (!mounted) {
     return (
       <div className="mb-6 flex animate-pulse items-center gap-1 rounded-lg border bg-muted/30 p-1">
-        {Array.from({ length: 7 }).map((_, i) => (
+        {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="h-7 w-16 rounded-md bg-muted/50" />
         ))}
       </div>
@@ -108,6 +112,9 @@ export function AdminPanel({
       )}
       {tab === "apikeys" && (
         <AdminApiKeys />
+      )}
+      {tab === "variables" && (
+        <AdminVariables variables={variables} />
       )}
       {tab === "settings" && (
         <AdminSettings config={config} />

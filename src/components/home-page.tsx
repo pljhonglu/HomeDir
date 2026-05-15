@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import type { SiteData, ShortcutConfig } from "@/lib/types";
+import type { SiteData, ShortcutConfig, VariableData } from "@/lib/types";
+import { resolveVariables } from "@/lib/utils";
 import { getIcon, getIconUrl } from "@/lib/icons";
 import { SearchDialog } from "@/components/search-dialog";
 import { ShortcutHints } from "@/components/shortcut-hints";
@@ -160,16 +161,24 @@ export function HomePage({
   categories,
   shortcuts,
   defaultCategory,
+  variables,
 }: {
   sites: SiteData[];
   categories: string[];
   shortcuts: ShortcutConfig[];
   defaultCategory: string | null;
+  variables: VariableData[];
 }) {
   const [active, setActive] = useState(defaultCategory && categories.includes(defaultCategory) ? defaultCategory : ALL);
   const [isInternal, setIsInternal] = useState(true);
   const [manualOverride, setManualOverride] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  const varMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const v of variables) map[v.name] = v.value;
+    return map;
+  }, [variables]);
 
   // 每次加载自动探测，手动切换后跳过
   useEffect(() => {
@@ -190,8 +199,8 @@ export function HomePage({
 
   return (
     <>
-      <SearchDialog sites={sites} categories={categories} isInternal={isInternal} open={searchOpen} onOpenChange={setSearchOpen} />
-      <ShortcutHints sites={sites} isInternal={isInternal} onSearch={() => setSearchOpen(true)} shortcuts={shortcuts} />
+      <SearchDialog sites={sites} categories={categories} isInternal={isInternal} open={searchOpen} onOpenChange={setSearchOpen} variables={varMap} />
+      <ShortcutHints sites={sites} isInternal={isInternal} onSearch={() => setSearchOpen(true)} shortcuts={shortcuts} variables={varMap} />
 
       {/* 工具栏 */}
       <div className="mb-8 flex items-center justify-between">
@@ -233,7 +242,8 @@ export function HomePage({
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           {filtered.map((site) => {
             const Icon = getIcon(site.icon);
-            const url = (isInternal ? site.url.internal : site.url.external) || site.url.internal || site.url.external;
+            const rawUrl = (isInternal ? site.url.internal : site.url.external) || site.url.internal || site.url.external;
+            const url = resolveVariables(rawUrl, varMap);
             return (
               <a
                 key={site.id}
