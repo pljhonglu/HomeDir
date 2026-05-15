@@ -174,27 +174,27 @@ export function AdminApiKeys() {
         <div className="space-y-2 text-[11px] text-muted-foreground">
           <div>
             <div className="font-medium text-foreground/80">获取站点列表</div>
-            <code className="block rounded bg-muted px-2 py-1 mt-1">GET /api/sites</code>
+            <code className="block rounded bg-muted px-2 py-1 mt-1">GET /openapi/sites</code>
           </div>
           <div>
             <div className="font-medium text-foreground/80">创建站点</div>
-            <code className="block rounded bg-muted px-2 py-1 mt-1">POST /api/sites {"{ name, category, url_internal, url_external, ... }"}</code>
+            <code className="block rounded bg-muted px-2 py-1 mt-1">POST /openapi/sites {"{ name, category, url_internal, url_external, ... }"}</code>
           </div>
           <div>
             <div className="font-medium text-foreground/80">更新站点</div>
-            <code className="block rounded bg-muted px-2 py-1 mt-1">PUT /api/sites {"{ id, name, ... }"}</code>
+            <code className="block rounded bg-muted px-2 py-1 mt-1">PUT /openapi/sites {"{ id, name, ... }"}</code>
           </div>
           <div>
             <div className="font-medium text-foreground/80">删除站点</div>
-            <code className="block rounded bg-muted px-2 py-1 mt-1">DELETE /api/sites?id=&lt;site_id&gt;</code>
+            <code className="block rounded bg-muted px-2 py-1 mt-1">DELETE /openapi/sites?id=&lt;site_id&gt;</code>
           </div>
           <div>
             <div className="font-medium text-foreground/80">获取配置</div>
-            <code className="block rounded bg-muted px-2 py-1 mt-1">GET /api/config</code>
+            <code className="block rounded bg-muted px-2 py-1 mt-1">GET /openapi/config</code>
           </div>
           <div>
             <div className="font-medium text-foreground/80">更新配置</div>
-            <code className="block rounded bg-muted px-2 py-1 mt-1">PUT /api/config {"{ site_name, site_description, footer_text }"}</code>
+            <code className="block rounded bg-muted px-2 py-1 mt-1">PUT /openapi/config {"{ site_name, site_description, footer_text }"}</code>
           </div>
         </div>
       </div>
